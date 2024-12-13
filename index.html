@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>烟花发射效果</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+        #fireworkCanvas {
+            display: block;
+        }
+        .text-display {
+            position: absolute;
+            font-size: 2rem;
+            font-weight: bold;
+            pointer-events: none;
+            white-space: nowrap;
+            animation: colorGlow 3s linear infinite, scaleUpFadeOut 3s ease-out forwards;
+        }
+
+        @keyframes colorGlow {
+            0%, 100% {
+                color: red;
+                text-shadow: 0 0 5px red, 0 0 10px orange, 0 0 20px yellow;
+            }
+            25% {
+                color: blue;
+                text-shadow: 0 0 5px blue, 0 0 10px cyan, 0 0 20px white;
+            }
+            50% {
+                color: green;
+                text-shadow: 0 0 5px green, 0 0 10px lime, 0 0 20px white;
+            }
+            75% {
+                color: purple;
+                text-shadow: 0 0 5px purple, 0 0 10px violet, 0 0 20px pink;
+            }
+        }
+
+        @keyframes scaleUpFadeOut {
+            0% {
+                opacity: 1;
+                transform: scale(1) translate(-50%, -50%);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(3) translate(-50%, -50%);
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="fireworkCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('fireworkCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const fireworks = [];
+        const particles = [];
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const displayText = urlParams.get('text') || '';
+
+        class Firework {
+            constructor(startX, startY, targetX, targetY) {
+                this.x = startX;
+                this.y = startY;
+                this.startX = startX;
+                this.startY = startY;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.distanceToTarget = Math.sqrt((targetX - startX) ** 2 + (targetY - startY) ** 2);
+                this.distanceTraveled = 0;
+                this.coordinates = [];
+                this.coordinateCount = 5;
+                while (this.coordinateCount--) {
+                    this.coordinates.push([this.x, this.y]);
+                }
+                this.angle = Math.atan2(targetY - startY, targetX - startX);
+                this.speed = 5;
+                this.acceleration = 1.03;
+                this.brightness = Math.random() * 50 + 50;
+            }
+
+            update(index) {
+                this.coordinates.pop();
+                this.coordinates.unshift([this.x, this.y]);
+
+                this.speed *= this.acceleration;
+
+                const vx = Math.cos(this.angle) * this.speed;
+                const vy = Math.sin(this.angle) * this.speed;
+                this.distanceTraveled = Math.sqrt((this.x - this.startX) ** 2 + (this.y - this.startY) ** 2);
+
+                if (this.distanceTraveled >= this.distanceToTarget) {
+                    createParticles(this.targetX, this.targetY);
+                    displayTextAt(this.targetX, this.targetY, displayText);
+                    fireworks.splice(index, 1);
+                } else {
+                    this.x += vx;
+                    this.y += vy;
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+                ctx.lineTo(this.x, this.y);
+                ctx.strokeStyle = `hsl(${Math.random() * 360}, 100%, ${this.brightness}%)`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.coordinates = [];
+                this.coordinateCount = 5;
+                while (this.coordinateCount--) {
+                    this.coordinates.push([this.x, this.y]);
+                }
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 10 + 2;
+                this.friction = 0.95;
+                this.gravity = 1;
+                this.hue = Math.random() * 360;
+                this.brightness = Math.random() * 60 + 40;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.03 + 0.01;
+            }
+
+            update(index) {
+                this.coordinates.pop();
+                this.coordinates.unshift([this.x, this.y]);
+
+                this.speed *= this.friction;
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed + this.gravity;
+                this.alpha -= this.decay;
+
+                if (this.alpha <= this.decay) {
+                    particles.splice(index, 1);
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+                ctx.lineTo(this.x, this.y);
+                ctx.strokeStyle = `hsla(${this.hue}, 100%, ${this.brightness}%, ${this.alpha})`;
+                ctx.stroke();
+            }
+        }
+
+        function createParticles(x, y) {
+            let particleCount = 100;
+            while (particleCount--) {
+                particles.push(new Particle(x, y));
+            }
+        }
+
+        function displayTextAt(x, y, text) {
+            if (!text) return;
+            const div = document.createElement('div');
+            div.className = 'text-display';
+            div.style.left = `${x}px`;
+            div.style.top = `${y}px`;
+            div.style.transform = 'translate(-50%, -50%)';
+            div.textContent = text;
+            document.body.appendChild(div);
+
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        function loop() {
+            requestAnimationFrame(loop);
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalCompositeOperation = 'lighter';
+
+            let i = fireworks.length;
+            while (i--) {
+                fireworks[i].draw();
+                fireworks[i].update(i);
+            }
+
+            let j = particles.length;
+            while (j--) {
+                particles[j].draw();
+                particles[j].update(j);
+            }
+        }
+
+        function launchFirework(x, y) {
+            const startX = x;
+            const startY = canvas.height;
+            fireworks.push(new Firework(startX, startY, x, y));
+        }
+
+        function throttle(func, wait) {
+            let timeout;
+            return function(...args) {
+                if (!timeout) {
+                    timeout = setTimeout(() => {
+                        func.apply(this, args);
+                        timeout = null;
+                    }, wait);
+                }
+            };
+        }
+        canvas.addEventListener('mousedown', function(event) {
+            launchFirework(event.clientX, event.clientY);
+        });
+
+        canvas.addEventListener('mousemove', throttle(function(event) {
+            if (event.buttons > 0) {
+                launchFirework(event.clientX, event.clientY);
+            }
+        }, 10));
+        canvas.addEventListener('touchmove', throttle(function(event) {
+            launchFirework(event.touches[0].clientX, event.touches[0].clientY);
+        }, 10));
+        // 支持多点触控
+        canvas.addEventListener('touchstart', function(event) {
+            for (let i = 0; i < event.touches.length; i++) {
+                launchFirework(event.touches[i].clientX, event.touches[i].clientY);
+            }
+        });
+
+        loop();
+    </script>
+</body>
+</html>
