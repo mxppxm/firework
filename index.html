@@ -76,8 +76,6 @@
             canvas.height = window.innerHeight;
         });
 
-
-
         const fireworks = [];
         const particles = [];
 
@@ -85,7 +83,7 @@
         const displayText = urlParams.get('text') || '';
 
         class Firework {
-            constructor (startX, startY, targetX, targetY) {
+            constructor (startX, startY, targetX, targetY, isLarge = false) {
                 this.x = startX;
                 this.y = startY;
                 this.startX = startX;
@@ -100,9 +98,10 @@
                     this.coordinates.push([ this.x, this.y ]);
                 }
                 this.angle = Math.atan2(targetY - startY, targetX - startX);
-                this.speed = 5;
+                this.speed = isLarge ? 10 : 5;
                 this.acceleration = 1.03;
                 this.brightness = Math.random() * 50 + 50;
+                this.isLarge = isLarge;
             }
 
             update(index) {
@@ -116,7 +115,7 @@
                 this.distanceTraveled = Math.sqrt((this.x - this.startX) ** 2 + (this.y - this.startY) ** 2);
 
                 if (this.distanceTraveled >= this.distanceToTarget) {
-                    createParticles(this.targetX, this.targetY);
+                    createParticles(this.targetX, this.targetY, this.isLarge);
                     displayTextAt(this.targetX, this.targetY, displayText);
                     fireworks.splice(index, 1);
                 } else {
@@ -130,13 +129,13 @@
                 ctx.moveTo(this.coordinates[ this.coordinates.length - 1 ][ 0 ], this.coordinates[ this.coordinates.length - 1 ][ 1 ]);
                 ctx.lineTo(this.x, this.y);
                 ctx.strokeStyle = `hsl(${Math.random() * 360}, 100%, ${this.brightness}%)`;
-                ctx.lineWidth = 2;
+                ctx.lineWidth = this.isLarge ? 4 : 2;
                 ctx.stroke();
             }
         }
 
         class Particle {
-            constructor (x, y) {
+            constructor (x, y, isLarge = false) {
                 this.x = x;
                 this.y = y;
                 this.coordinates = [];
@@ -145,13 +144,14 @@
                     this.coordinates.push([ this.x, this.y ]);
                 }
                 this.angle = Math.random() * Math.PI * 2;
-                this.speed = Math.random() * 10 + 2;
+                this.speed = Math.random() * (isLarge ? 20 : 10) + (isLarge ? 10 : 2);
                 this.friction = 0.95;
                 this.gravity = 1;
                 this.hue = Math.random() * 360;
                 this.brightness = Math.random() * 60 + 40;
                 this.alpha = 1;
                 this.decay = Math.random() * 0.03 + 0.01;
+                this.isLarge = isLarge;
             }
 
             update(index) {
@@ -177,10 +177,10 @@
             }
         }
 
-        function createParticles(x, y) {
-            let particleCount = 100;
+        function createParticles(x, y, isLarge = false) {
+            let particleCount = isLarge ? 200 : 100;
             while (particleCount--) {
-                particles.push(new Particle(x, y));
+                particles.push(new Particle(x, y, isLarge));
             }
         }
 
@@ -217,10 +217,10 @@
             }
         }
 
-        function launchFirework(x, y) {
+        function launchFirework(x, y, isLarge = false) {
             const startX = x;
             const startY = canvas.height;
-            fireworks.push(new Firework(startX, startY, x, y));
+            fireworks.push(new Firework(startX, startY, x, y, isLarge));
         }
 
         function throttle(func, wait) {
@@ -234,6 +234,7 @@
                 }
             };
         }
+
         canvas.addEventListener('mousedown', function (event) {
             launchFirework(event.clientX, event.clientY);
         });
@@ -243,9 +244,37 @@
                 launchFirework(event.clientX, event.clientY);
             }
         }, 10));
+
         canvas.addEventListener('touchmove', throttle(function (event) {
             launchFirework(event.touches[ 0 ].clientX, event.touches[ 0 ].clientY);
         }, 10));
+
+        let longPressTimer;
+
+        canvas.addEventListener('touchstart', function (event) {
+            event.preventDefault();
+            const touches = event.touches.length;
+            if (touches === 2) {
+                autoPlay();
+            } else if (touches === 1) {
+                const touch = event.touches[ 0 ];
+                if (touch.clientY > canvas.height - 200) {
+                    longPressTimer = setInterval(() => {
+                        for (let i = 0; i < 6; i++) {
+                            setTimeout(() => {
+                                const random = Math.random();
+                                launchFirework(window.innerWidth * random, window.innerHeight * 0.3 * random, true);
+                            }, 100 * i);
+                        }
+                    }, 300);
+                }
+            }
+        });
+
+        canvas.addEventListener('touchend', function (e) {
+            e.preventDefault();
+            clearTimeout(longPressTimer);
+        });
 
         let timer = null;
         const MAX_AUTO_PLAY = 50;
@@ -274,15 +303,7 @@
                     }, 50 * i);
                 }
             }, 1000);
-        }
-
-        // 支持多点触控
-        canvas.addEventListener('touchstart', function (event) {
-            const touches = event.touches.length;
-            if (touches == 2) {
-                autoPlay();
-            }
-        });
+        };
 
         loop();
     </script>
