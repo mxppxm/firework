@@ -67,12 +67,12 @@
             right: 20px;
             width: 1rem;
             height: 1rem;
-            background-color: rgba(255, 255, 255);
+            background-color: rgba(255, 255, 255，0.6);
             color: #000;
             font-size: 0.6rem;
             font-weight: bold;
             border: none;
-            border-radius: 5px;
+            border-radius: 50%;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: transform 0.2s;
@@ -195,7 +195,8 @@
         const fireworks = [];
         const particles = [];
 
-        let displayText = '';
+        const urlParams = new URLSearchParams(window.location.search);
+        let displayText = urlParams.get('t') || '';
 
         class Firework {
             constructor (startX, startY, targetX, targetY, isLarge = false) {
