@@ -259,8 +259,12 @@
             for (let i = 0; i < 10; i++) {
                 launchFirework(Math.random() * canvas.width, Math.random() * canvas.height);
             }
-            // 全屏
-            document.documentElement.requestFullscreen();
+            try {
+                // 全屏
+                document.documentElement.requestFullscreen();
+            } catch (e) {
+                console.log(e);
+            }
 
             // 开始随机发射模式，每次10个，每三秒一次，再次双指触摸取消
             timer = setInterval(function () {
