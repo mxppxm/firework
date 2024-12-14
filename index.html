@@ -60,16 +60,132 @@
                 transform: scale(3) translate(-50%, -50%);
             }
         }
+
+        .info-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 1rem;
+            height: 1rem;
+            background-color: rgba(255, 255, 255);
+            color: #000;
+            font-size: 0.6rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .info-button:hover {
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 500px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+            z-index: 1000;
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .modal-body {
+            font-size: 1rem;
+            color: #333;
+        }
+
+        .modal-close {
+            display: block;
+            margin-top: 15px;
+            padding: 5px 10px;
+            background-color: white;
+            color: black;
+            text-align: center;
+            border: none;
+            margin: 0 auto;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .modal-close:hover {
+            background-color: #c00;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
     </style>
 </head>
 
 <body>
     <canvas id="fireworkCanvas"></canvas>
+    <button class="info-button" id="infoButton">i</button>
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="modal" id="infoModal">
+        <div class="modal-header">玩法说明</div>
+        <div class="modal-body">
+            <p>欢迎体验烟花展示：</p>
+            <ul>
+                <li>单击屏幕任意位置：发射一束烟花。</li>
+                <li>长按屏幕下方：发射大型烟花。</li>
+                <li>双指触摸屏幕：进入自动烟花模式，双指再次触摸退出。</li>
+                <li>文字：<input id="text-input" /></li>
+            </ul>
+        </div>
+        <button class="modal-close" id="closeModal">确认</button>
+    </div>
+
     <script>
         const canvas = document.getElementById('fireworkCanvas');
         const ctx = canvas.getContext('2d');
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+
+        const infoButton = document.getElementById('infoButton');
+        const modal = document.getElementById('infoModal');
+        const overlay = document.getElementById('modalOverlay');
+        const closeModal = document.getElementById('closeModal');
+        const textInput = document.getElementById('text-input');
+
+        textInput.addEventListener('input', function () {
+            displayText = textInput.value;
+        });
+
+        infoButton.addEventListener('click', () => {
+            modal.style.display = 'block';
+            overlay.style.display = 'block';
+        });
+
+        closeModal.addEventListener('click', () => {
+            modal.style.display = 'none';
+            overlay.style.display = 'none';
+        });
+
+        overlay.addEventListener('click', () => {
+            modal.style.display = 'none';
+            overlay.style.display = 'none';
+        });
 
         window.addEventListener('resize', function () {
             canvas.width = window.innerWidth;
@@ -79,8 +195,7 @@
         const fireworks = [];
         const particles = [];
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const displayText = urlParams.get('text') || '';
+        let displayText = '';
 
         class Firework {
             constructor (startX, startY, targetX, targetY, isLarge = false) {
@@ -250,7 +365,6 @@
         }, 10));
 
         let longPressTimer;
-
         canvas.addEventListener('touchstart', function (event) {
             event.preventDefault();
             const touches = event.touches.length;
@@ -266,7 +380,7 @@
                                 launchFirework(window.innerWidth * random, window.innerHeight * 0.3 * random, true);
                             }, 100 * i);
                         }
-                    }, 300);
+                    }, 500);
                 } else {
                     launchFirework(touch.clientX, touch.clientY);
                 }
