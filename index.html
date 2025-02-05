@@ -22,6 +22,7 @@
             font-weight: bold;
             pointer-events: none;
             white-space: nowrap;
+            transform-origin: center center;
             animation: colorGlow 3s linear infinite, scaleUpFadeOut 3s ease-out forwards;
         }
 
@@ -52,12 +53,12 @@
         @keyframes scaleUpFadeOut {
             0% {
                 opacity: 1;
-                transform: scale(1) translate(-50%, -50%);
+                transform: translate(-50%, -50%) scale(1);
             }
 
             100% {
                 opacity: 0;
-                transform: scale(3) translate(-50%, -50%);
+                transform: translate(-50%, -50%) scale(3);
             }
         }
 
@@ -76,6 +77,7 @@
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: transform 0.2s;
+            visibility: hidden;
         }
 
         .info-button:hover {
@@ -196,7 +198,7 @@
         const particles = [];
 
         const urlParams = new URLSearchParams(window.location.search);
-        let displayText = urlParams.get('t') || '';
+        let displayText = '糟糟要开心！！！';
 
         class Firework {
             constructor (startX, startY, targetX, targetY, isLarge = false) {
@@ -214,8 +216,8 @@
                     this.coordinates.push([ this.x, this.y ]);
                 }
                 this.angle = Math.atan2(targetY - startY, targetX - startX);
-                this.speed = isLarge ? 10 : 5;
-                this.acceleration = 1.03;
+                this.speed = isLarge ? 15 : 5;
+                this.acceleration = isLarge ? 1.05 : 1.03;
                 this.brightness = Math.random() * 50 + 50;
                 this.isLarge = isLarge;
             }
@@ -231,6 +233,7 @@
                 this.distanceTraveled = Math.sqrt((this.x - this.startX) ** 2 + (this.y - this.startY) ** 2);
 
                 if (this.distanceTraveled >= this.distanceToTarget) {
+                    activeFireworks--;
                     createParticles(this.targetX, this.targetY, this.isLarge);
                     displayTextAt(this.targetX, this.targetY, displayText);
                     fireworks.splice(index, 1);
@@ -260,7 +263,7 @@
                     this.coordinates.push([ this.x, this.y ]);
                 }
                 this.angle = Math.random() * Math.PI * 2;
-                this.speed = Math.random() * (isLarge ? 20 : 10) + (isLarge ? 10 : 2);
+                this.speed = Math.random() * (isLarge ? 30 : 10) + (isLarge ? 15 : 2);
                 this.friction = 0.95;
                 this.gravity = 1;
                 this.hue = Math.random() * 360;
@@ -294,7 +297,7 @@
         }
 
         function createParticles(x, y, isLarge = false) {
-            let particleCount = isLarge ? 200 : 100;
+            let particleCount = isLarge ? 300 : 100;
             while (particleCount--) {
                 particles.push(new Particle(x, y, isLarge));
             }
@@ -304,8 +307,10 @@
             if (!text) return;
             const div = document.createElement('div');
             div.className = 'text-display';
-            div.style.left = `${x}px`;
-            div.style.top = `${y}px`;
+            const offsetX = (Math.random() * 300 - 150);
+            const offsetY = (Math.random() * 300 - 150);
+            div.style.left = `${x + offsetX}px`;
+            div.style.top = `${y + offsetY}px`;
             div.style.transform = 'translate(-50%, -50%)';
             div.textContent = text;
             document.body.appendChild(div);
@@ -339,90 +344,62 @@
             fireworks.push(new Firework(startX, startY, x, y, isLarge));
         }
 
-        function throttle(func, wait) {
-            let timeout;
-            return function (...args) {
-                if (!timeout) {
-                    timeout = setTimeout(() => {
-                        func.apply(this, args);
-                        timeout = null;
-                    }, wait);
-                }
-            };
+        let autoFireTimer = null;
+        let isFiring = false;
+        let activeFireworks = 0;
+        const FIRE_RATE = 100;
+        const FIRE_COUNT = 5; // 每次发射数量
+        const MAX_FIREWORKS = 50; // 最大同时存在烟花数
+        const DURATION = 5000; // 持续时间5秒
+
+        function startAutoFire() {
+            if (!isFiring && activeFireworks < MAX_FIREWORKS) {
+                isFiring = true;
+                
+                const fireInterval = setInterval(() => {
+                    if (activeFireworks < MAX_FIREWORKS) {
+                        for (let i = 0; i < FIRE_COUNT; i++) {
+                            const x = Math.random() * canvas.width;
+                            const y = Math.random() * canvas.height * 0.5;
+                            const isLarge = Math.random() < 0.2;
+                            activeFireworks++;
+                            launchFirework(x, y, isLarge);
+                        }
+                    }
+                }, FIRE_RATE);
+
+                setTimeout(() => {
+                    clearInterval(fireInterval);
+                    isFiring = false;
+                }, DURATION);
+            }
         }
 
-        canvas.addEventListener('mousedown', function (event) {
-            launchFirework(event.clientX, event.clientY);
-        });
-
-        canvas.addEventListener('mousemove', throttle(function (event) {
-            if (event.buttons > 0) {
-                launchFirework(event.clientX, event.clientY);
-            }
-        }, 10));
-
-        canvas.addEventListener('touchmove', throttle(function (event) {
-            launchFirework(event.touches[ 0 ].clientX, event.touches[ 0 ].clientY);
-        }, 10));
-
-        let longPressTimer;
-        canvas.addEventListener('touchstart', function (event) {
-            event.preventDefault();
-            const touches = event.touches.length;
-            if (touches === 2) {
-                autoPlay();
-            } else if (touches === 1) {
-                const touch = event.touches[ 0 ];
-                if (touch.clientY > canvas.height - 200) {
-                    longPressTimer = setInterval(() => {
-                        for (let i = 0; i < 6; i++) {
-                            setTimeout(() => {
-                                const random = Math.random();
-                                launchFirework(window.innerWidth * random, window.innerHeight * 0.3 * random, true);
-                            }, 100 * i);
-                        }
-                    }, 500);
-                } else {
-                    launchFirework(touch.clientX, touch.clientY);
-                }
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && autoFireTimer) {
+                clearInterval(autoFireTimer);
+                autoFireTimer = null;
             }
         });
-
-        canvas.addEventListener('touchend', function (e) {
-            e.preventDefault();
-            clearTimeout(longPressTimer);
-        });
-
-        let timer = null;
-        const MAX_AUTO_PLAY = 50;
-        const autoPlay = () => {
-            if (timer) {
-                clearInterval(timer);
-                timer = null;
-                document.exitFullscreen();
-                return;
-            }
-            for (let i = 0; i < 10; i++) {
-                launchFirework(Math.random() * canvas.width, Math.random() * canvas.height);
-            }
-            try {
-                // 全屏
-                document.documentElement.requestFullscreen();
-            } catch (e) {
-                console.log(e);
-            }
-
-            // 开始随机发射模式，每次10个，每三秒一次，再次双指触摸取消
-            timer = setInterval(function () {
-                for (let i = 0; i < MAX_AUTO_PLAY; i++) {
-                    setTimeout(() => {
-                        launchFirework(Math.random() * canvas.width, Math.random() * canvas.height);
-                    }, 50 * i);
-                }
-            }, 1000);
-        };
 
         loop();
+
+        canvas.addEventListener('mousedown', function (event) {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            }
+            if (!isFiring) {
+                startAutoFire();
+            }
+        });
+
+        canvas.addEventListener('touchstart', function (event) {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            }
+            startAutoFire();
+            event.preventDefault();
+        });
     </script>
 </body>
 
