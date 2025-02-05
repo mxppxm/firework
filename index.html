@@ -177,7 +177,7 @@
         let displayText = '糟糟要开心！！！';
 
         class Firework {
-            constructor (startX, startY, targetX, targetY, isLarge = false) {
+            constructor (startX, startY, targetX, targetY, isLarge,speed) {
                 this.x = startX;
                 this.y = startY;
                 this.startX = startX;
@@ -192,7 +192,7 @@
                     this.coordinates.push([ this.x, this.y ]);
                 }
                 this.angle = Math.atan2(targetY - startY, targetX - startX);
-                this.speed = isLarge ? 12 : 4;
+                this.speed = speed || (isLarge ? 12 : 4);
                 this.acceleration = isLarge ? 1.03 : 1.02;
                 this.brightness = Math.random() * 50 + 50;
                 this.isLarge = isLarge;
@@ -274,7 +274,7 @@
 
         // 新增文字显示类
         class TextDisplay {
-            constructor(x, y, text) {
+            constructor(x, y, text, isSpecial = false) {
                 this.x = x;
                 this.y = y;
                 this.text = text;
@@ -284,7 +284,8 @@
                 this.speed = Math.random() * 0.3 + 0.2;
                 this.driftX = Math.random() * 2 - 1;
                 this.driftY = Math.random() * 2 - 1;
-                this.fadeSpeed = 0.03; // 初始消失速度提高
+                this.fadeSpeed = isSpecial ? 0.005 : 0.03; // 为首发文字设置更慢的初始消失速度
+                this.isSpecial = isSpecial; // 添加特殊标记
             }
 
             update() {
@@ -296,9 +297,11 @@
                 this.x += this.driftX + Math.cos(Date.now() * 0.003) * 0.5;
                 this.y += this.driftY + wave * 0.1;
 
-                // 添加非线性衰减
-                if (this.alpha < 0.3) {
-                    this.fadeSpeed *= 1.2;
+                // 仅对首发文字应用更温和的衰减加速
+                if (this.isSpecial && this.alpha < 0.3) {
+                    this.fadeSpeed *= 1.05; // 更平缓的加速
+                } else if (!this.isSpecial && this.alpha < 0.2) {
+                    this.fadeSpeed *= 1.1;
                 }
             }
 
@@ -339,9 +342,9 @@
 
         function displayTextAt(x, y, text) {
             if (!text) return;
-            // 只在首发烟花爆炸时显示特殊文字
-            if (x === canvas.width/2 && y === canvas.height*2/3) {
-                textDisplays.push(new TextDisplay(x, y, '开心每一天！'));
+            if (x === canvas.width/2 && y === canvas.height*1/3) {
+                const specialText = new TextDisplay(x, y, '糟糟！！', true); // 标记为特殊文字
+                textDisplays.push(specialText);
             } else {
                 const offsetX = (Math.random() * 200 - 100);
                 const offsetY = (Math.random() * 200 - 100);
@@ -379,10 +382,10 @@
             }
         }
 
-        function launchFirework(x, y, isLarge = false) {
+        function launchFirework(x, y, isLarge,speed) {
             const startX = x;
             const startY = canvas.height;
-            fireworks.push(new Firework(startX, startY, x, y, isLarge));
+            fireworks.push(new Firework(startX, startY, x, y, isLarge,speed));
         }
 
         let autoFireTimer = null;
@@ -401,7 +404,7 @@
                 const centerX = canvas.width / 2;
                 const targetY = canvas.height * 1/3;
                 activeFireworks++;
-                launchFirework(centerX, targetY, true);
+                launchFirework(centerX, targetY, true,8);
                 
                 // 延迟后开始常规发射
                 setTimeout(() => {
