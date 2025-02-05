@@ -439,7 +439,7 @@
 
         canvas.addEventListener('click', function (event) {
             if (!document.fullscreenElement) {
-                // document.documentElement.requestFullscreen();
+                document.documentElement.requestFullscreen();
             }
             if (!isFiring) {
                 startAutoFire();
@@ -448,7 +448,7 @@
 
         canvas.addEventListener('touchstart', function (event) {
             if (!document.fullscreenElement) {
-                // document.documentElement.requestFullscreen();
+                document.documentElement.requestFullscreen();
             }
             startAutoFire();
             event.preventDefault();
